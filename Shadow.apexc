@@ -1,0 +1,225 @@
+public class Shadow {
+    
+  	private Map<String, Transact> transactionsMap;
+
+    // inner class implementing transaction for sObject
+    private class Transact {
+        private Map<Id, sObject> toUpdate;
+        private Map<Id, sObject> toDelete;
+        private List<sObject> toInsert;
+        
+        
+        public transact() {
+            toUpdate = new Map<Id, sObject>();
+            toDelete = new Map<Id, sObject>();
+            toInsert = new List<sObject>();
+        }
+        
+        public void imprint() {
+                if (toUpdate.size() > 0)
+                	update toUpdate.values();
+                if (toDelete.size() > 0)
+                    delete toDelete.values();
+                if (toInsert.size() > 0)
+                    insert toInsert;
+        }
+        
+        public void del(sObject obj) {
+            if (obj != null && obj.id != null) {
+                toDelete.put(obj.id, obj);
+                if (toUpdate.containsKey(obj.id))
+                    toUpdate.remove(obj.id);
+            } else {
+                // todo: exception
+            }
+        }
+        
+        public void upd(sObject obj, Boolean mergeUpdate) {
+            if (obj != null && obj.id != null) {
+                if (mergeUpdate && toUpdate.containsKey(obj.id)) {
+                    toUpdate.put(obj.id, X.refine(toUpdate.get(obj.id), obj));
+                } else {
+                    toUpdate.put(obj.id, obj);
+                }
+            } else {
+                // todo: exception
+            }
+        }
+        
+        public void upd(sObject obj) {
+            this.upd(obj, true);
+        }
+        
+        public void ins(sObject obj) {
+            if (obj != null && obj.id == null) {
+            	toInsert.add(obj);  
+            } else {
+                // todo: exception
+            }
+        }
+        
+   		public List<sObject> with(List<sObject> objList) {
+            Map<Id, sObject> objMap = new Map<Id, sObject>(objList);
+            for (Id id_i : toDelete.keySet())
+                objMap.remove(id_i);
+            for (Id id_i : toUpdate.keySet())
+                objMap.put(id_i, toUpdate.get(id_i));
+            List<sObject> shadowList = objMap.values();
+			shadowList.addAll(toInsert);
+            return shadowList;
+        }
+    }
+    
+    
+    // constructor
+    public Shadow(List<String> affectedObjects) {
+        transactionsMap = new Map<String, Transact>();
+        if (affectedObjects != null && affectedObjects.size() > 0) {
+            for (String string_i : affectedObjects) {
+                transactionsMap.put(string_i, new Transact());
+            }
+        } else {
+            // todo: exception
+        }
+    }
+    
+    public void imprint() {
+        for (String string_i : transactionsMap.keySet()) {
+            transactionsMap.get(string_i).imprint();
+        }
+    }
+    
+    
+    // todo: refactor del and ups methods to keep code dry
+    
+    public Shadow ups(String objName, sObject obj, Boolean mergeUpdate) {
+        // todo: check if obj is an instance of objName, then remove null check on the next line
+        if (transactionsMap.containsKey(objName) && obj != null) {
+            if (obj.id != null) {
+                transactionsMap.get(objName).upd(obj, mergeUpdate);
+            } else {
+                transactionsMap.get(objName).ins(obj);
+            }
+        } else {
+            // todo: exception
+        }
+        return this;
+    }
+    
+    public Shadow ups(sObject obj, Boolean mergeUpdate) {
+		this.ups(X.objectName(obj), obj, mergeUpdate);
+        return this;
+    }
+    
+    public Shadow ups(String objName, sObject obj) {
+    	this.ups(objName, obj, true);
+        return this;
+    }
+    
+    public Shadow ups(sObject obj) {
+    	return this.ups(X.objectName(obj), obj, true);
+    	return this;
+    }
+ 
+    public Shadow ups(String objName, List<sObject> objList, Boolean mergeUpdate) {
+        if (transactionsMap.containsKey(objName) && objList != null) {
+            for (sObject obj : objList) {
+                // todo: check if obj is an instance of objName, then remove null check on the next line
+                if (obj.id != null) {
+                    transactionsMap.get(objName).upd(obj, mergeUpdate);
+                } else {
+                    transactionsMap.get(objName).ins(obj);
+                }
+            }
+        } else {
+            // todo: exception
+        }
+        return this;
+    }
+
+    public Shadow ups(String objName, List<sObject> objList) {
+		this.ups(objName, objList, true);
+        return this;
+    }
+    
+    public Shadow ups(List<sObject> objList) {
+        if (objList != null && objList.size() > 0) {
+            this.ups(X.objectName(objList[0]), objList, true);
+        } else {
+            // todo: exception ?
+        }
+        return this;
+    }
+    
+    public Shadow ups(List<sObject> objList, Boolean mergeUpdate) {
+        if (objList != null && objList.size() > 0) {
+            this.ups(X.objectName(objList[0]), objList, mergeUpdate);
+        } else {
+            // todo: exception ?
+        }
+        return this;
+    }
+    
+    public Shadow del(String objName, sObject obj) {
+        // todo: check if obj is an instance of objName, then remove null check on the next line
+        if (transactionsMap.containsKey(objName) && obj != null) {
+            if (obj.id != null) {
+                transactionsMap.get(objName).del(obj);
+            } else {
+                // todo: exception
+            }
+        } else {
+            // todo: exception
+        }
+        return this;
+    }
+    
+    public Shadow del(sObject obj) {
+        this.del(X.objectName(obj), obj);
+        return this;
+    }
+    
+    
+    public Shadow del(String objName, List<sObject> objList) {
+        if (transactionsMap.containsKey(objName) && objList != null) {
+            for (sObject obj : objList) {
+                // todo: check if obj is an instance of objName, then remove null check on the next line
+                if (obj.id != null) {
+                    transactionsMap.get(objName).del(obj);
+                } else {
+                    // exception
+                }
+            }
+        } else {
+            // todo: exception
+        }
+        return this;
+    }
+    
+    public Shadow del(List<sObject> objList) {
+        if (objList != null && objList.size() > 0) {
+            this.del(X.objectName(objList[0]), objList);
+        } else {
+            // todo: exception
+        }
+        return this;
+    }
+    
+    public List<sObject> with(String objName, List<sObject> objList) {
+        if (transactionsMap.containsKey(objName) && objList != null) {
+        	return transactionsMap.get(objName).with(objList);
+        } else {
+            return null;
+            // todo: exception ?
+        }
+    }
+    
+    public List<sObject> with(List<sObject> objList) {
+        if (objList != null && objList.size() > 0) {
+            return this.with(X.objectName(objList[0]), new List<sObject>());
+        } else {
+            return null;
+            // todo: exception ?
+        }
+    }
+}
